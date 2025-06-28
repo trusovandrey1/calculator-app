@@ -86,7 +86,7 @@ jobs:
         docker build -t calculator-backend:${{ steps.changelog.outputs.tag_name }} ./api
         
     - name: Archive production artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: production-build-${{ steps.changelog.outputs.tag_name }}
         path: |
