@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: calculator-app/package-lock.json
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install frontend dependencies
+      working-directory: ./calculator-app
+      run: npm ci
+      
+    - name: Install backend dependencies
+      working-directory: ./api
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Build frontend
+      working-directory: ./calculator-app
+      run: npm run build
+      
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get tag name
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        
+        # Generate changelog between tags
+        if git describe --tags --abbrev=0 HEAD~1 >/dev/null 2>&1; then
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1)
+          CHANGELOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+        else
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+        fi
+        
+        # Write changelog to file
+        echo "# Changes in $TAG_NAME" > CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "$CHANGELOG" >> CHANGELOG.md
+        
+        # Set output
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        cat CHANGELOG.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.changelog.outputs.tag_name }}
+        release_name: Release ${{ steps.changelog.outputs.tag_name }}
+        body: ${{ steps.changelog.outputs.changelog }}
+        draft: false
+        prerelease: false
+        
+    - name: Build Docker images
+      run: |
+        # Build frontend Docker image
+        docker build -t calculator-frontend:${{ steps.changelog.outputs.tag_name }} ./calculator-app
+        
+        # Build backend Docker image
+        docker build -t calculator-backend:${{ steps.changelog.outputs.tag_name }} ./api
+        
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: production-build-${{ steps.changelog.outputs.tag_name }}
+        path: |
+          calculator-app/.next/
+          api/
+          !api/__pycache__/
+          !api/venv/
+        retention-days: 30
