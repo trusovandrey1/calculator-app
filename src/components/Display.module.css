@@ -1,0 +1,24 @@
+.display {
+  padding: 20px;
+  text-align: right;
+  color: white;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.equation {
+  font-size: 14px;
+  opacity: 0.7;
+  margin-bottom: 8px;
+  font-weight: 300;
+}
+
+.value {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+  word-break: break-all;
+}
