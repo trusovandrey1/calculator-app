@@ -1,5 +1,6 @@
+'use client'
+
 import { ReactNode } from 'react'
-import styles from './Button.module.css'
 
 interface ButtonProps {
   children: ReactNode
@@ -15,9 +16,11 @@ export default function Button({ children, onClick, className = '', colSpan, row
     ...(rowSpan && { gridRow: `span ${rowSpan}` })
   }
 
+  const baseClasses = "glass-button p-4 text-lg font-semibold text-white select-none focus:outline-none focus:ring-2 focus:ring-white/30"
+  
   return (
     <button
-      className={`${styles.button} glass-button ${className}`}
+      className={`${baseClasses} ${className}`}
       onClick={onClick}
       style={gridStyle}
     >
